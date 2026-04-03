@@ -351,7 +351,10 @@ if (streetsPanel && streetsPanelToggle) {
 }
 
 const TASHKENT_BORDERS_URL =
-  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260331_borders.geojson";
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260403_borders.geojson";
+
+const TASHKENT_OTHER_BORDERS_URL =
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260403_other_streets.geojson";
 
 map.on("load", async () => {
   const shadows = new BuildingShadowsLayer({
@@ -471,6 +474,11 @@ map.on("load", async () => {
     data: TASHKENT_BORDERS_URL,
   });
 
+  map.addSource("tashkent-other-borders", {
+    type: "geojson",
+    data: TASHKENT_OTHER_BORDERS_URL,
+  });
+
   map.addSource("tashkent-lines", {
     type: "geojson",
     data: "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260331_axises.geojson",
@@ -501,6 +509,17 @@ map.on("load", async () => {
         18,
         ["case", ["==", ["get", "Name"], selectedFeatureId], 0.3, 0],
       ],
+    },
+  });
+
+  map.addLayer({
+    id: "tashkent-other-borders",
+    type: "fill",
+    source: "tashkent-other-borders",
+    paint: {
+      "fill-color": "#464646",
+
+      "fill-opacity": 0.3,
     },
   });
 
@@ -708,6 +727,43 @@ function selectBorderFeature(feature, opts = {}) {
   });
 }
 
+function selectOtherBorderFeature(feature) {
+  if (!feature) return;
+
+  const props = feature.properties || {};
+
+  if (activeBorderPopup) {
+    activeBorderPopup.remove();
+    activeBorderPopup = null;
+  }
+
+  clearBorderSelection();
+
+  const name = (props.Name || "").trim();
+  const center = getFeatureCenter(feature);
+
+  activeBorderPopup = new maplibregl.Popup({
+    closeButton: true,
+    closeOnClick: true,
+  })
+    .setLngLat(center)
+    .setHTML(
+      `
+      <div style="min-width:180px;">
+        <div style="font-weight:600;">
+          ${escapeHtml(name || "Без названия")}
+        </div>
+      </div>
+    `,
+    )
+    .addTo(map);
+
+  activeBorderPopup.on("close", () => {
+    activeBorderPopup = null;
+    clearBorderSelection();
+  });
+}
+
 function etapOrderValue(etap) {
   if (etap === "March") return 1;
   if (etap === "April") return 2;
@@ -803,11 +859,26 @@ map.on("click", "tashkent-borders", (e) => {
   selectBorderFeature(feature, { flyToFeature: false });
 });
 
+map.on("click", "tashkent-other-borders", (e) => {
+  if (ruler.isEnabled?.() || mirrorsModeEnabled) return;
+
+  const topFeature = map.queryRenderedFeatures(e.point, {
+    layers: ["tashkent-borders", "tashkent-other-borders"],
+  })[0];
+
+  if (!topFeature || topFeature.layer.id !== "tashkent-other-borders") return;
+
+  const feature = e.features?.[0];
+  if (!feature) return;
+
+  selectOtherBorderFeature(feature);
+});
+
 map.on("click", (e) => {
   if (ruler.isEnabled?.() || mirrorsModeEnabled) return;
 
   const features = map.queryRenderedFeatures(e.point, {
-    layers: ["tashkent-borders"],
+    layers: ["tashkent-borders", "tashkent-other-borders"],
   });
 
   if (features.length) return;
@@ -844,6 +915,16 @@ map.on("mouseenter", "tashkent-borders", () => {
 });
 
 map.on("mouseleave", "tashkent-borders", () => {
+  if (ruler.isEnabled?.() || mirrorsModeEnabled) return;
+  map.getCanvas().style.cursor = "";
+});
+
+map.on("mouseenter", "tashkent-other-borders", () => {
+  if (ruler.isEnabled?.() || mirrorsModeEnabled) return;
+  map.getCanvas().style.cursor = "pointer";
+});
+
+map.on("mouseleave", "tashkent-other-borders", () => {
   if (ruler.isEnabled?.() || mirrorsModeEnabled) return;
   map.getCanvas().style.cursor = "";
 });

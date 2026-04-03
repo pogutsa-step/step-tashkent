@@ -1,0 +1,318 @@
+<!doctype html>
+<html>
+  <head>
+    <title>STEP City Tashkent</title>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css"
+      crossorigin="anonymous"
+      rel="stylesheet"
+    />
+    <script src="https://unpkg.com/maplibre-gl@5.16.0/dist/maplibre-gl.js"></script>
+    <link
+      href="https://unpkg.com/maplibre-gl@5.16.0/dist/maplibre-gl.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.min.js"></script>
+    <script src="https://unpkg.com/@turf/turf@6.3.0/turf.min.js"></script>
+    <script src="https://unpkg.com/pmtiles@3.2.0/dist/pmtiles.js"></script>
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.js"></script>
+    <link
+      rel="stylesheet"
+      href="./src/styles.css"
+      type="text/css"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.css"
+      type="text/css"
+    />
+
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..900&display=swap");
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        font-family: "Golos Text", sans-serif;
+        overflow: hidden;
+      }
+
+      #map {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+      }
+
+      #streets-panel {
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 340px;
+        z-index: 20;
+
+        backdrop-filter: blur(6px);
+        box-shadow: 2px 0 14px rgba(0, 0, 0, 0.12);
+        transform: translateX(0);
+        transition: transform 0.2s ease;
+        display: flex;
+        flex-direction: column;
+        background: #51555cc2;
+        backdrop-filter: blur(10px);
+      }
+
+      #streets-panel.is-collapsed {
+        transform: translateX(-100%);
+      }
+
+      #streets-panel-toggle {
+        position: absolute;
+        top: 9px;
+        left: 304px;
+        z-index: 21;
+        width: 36px;
+        height: 36px;
+        border: 0;
+        border-top-right-radius: 8px;
+        background-color: transparent;
+        color: white;
+        box-shadow: none;
+        cursor: pointer;
+        font-size: 18px;
+        transition:
+          left 0.2s ease,
+          background-color 0.2s ease;
+        border-bottom-right-radius: 8px;
+      }
+
+      #streets-panel.is-collapsed + #streets-panel-toggle {
+        left: 0px;
+        background-color: #51555cc2;
+        box-shadow: 5px 0px 10px rgba(0, 0, 0, 0.14);
+      }
+
+      .streets-panel__header {
+        padding: 14px 16px 10px;
+        border-bottom: 1px solid #e5e7eb;
+        font-weight: 700;
+        font-size: 16px;
+      }
+
+      .streets-panel__body {
+        flex: 1;
+        overflow: auto;
+        padding: 10px 10px 18px;
+      }
+
+      .streets-group {
+        margin-bottom: 14px;
+        border: 1px solid #ececec;
+        border-radius: 10px;
+        overflow: hidden;
+        /*background: #fff;*/
+      }
+
+      .streets-group__title {
+        padding: 10px 12px;
+        font-weight: 700;
+        color: #fff;
+      }
+
+      .streets-group[data-etap="March"] .streets-group__title {
+        background: #229670;
+      }
+
+      .streets-group[data-etap="April"] .streets-group__title {
+        background: #285cd4;
+      }
+
+      .streets-group[data-etap="May"] .streets-group__title {
+        background: #d13f7c;
+      }
+
+      .streets-list {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .street-item {
+        appearance: none;
+        border: 0;
+        background: #ffffff7d;
+        text-align: left;
+        width: 100%;
+        padding: 10px 12px;
+        cursor: pointer;
+        border-top: 1px solid #f1f1f1;
+        font-size: 14px;
+        line-height: 1.3;
+        font-family: inherit;
+      }
+
+      .street-item:first-child {
+        border-top: 0;
+      }
+
+      .street-item:hover {
+        background: #f7f9fc;
+      }
+
+      .street-item.is-active {
+        background: #eef4ff;
+        font-weight: 600;
+      }
+
+      .street-item__number {
+        display: inline-block;
+        min-width: 32px;
+        margin-right: 8px;
+        color: #777;
+      }
+      .streets-panel__search {
+        padding: 10px 12px;
+        border-bottom: 1px solid #e5e7eb;
+        background: rgba(255, 255, 255, 0.5);
+      }
+
+      #streets-search-input {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #d7dbe3;
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 14px;
+        outline: none;
+        background: #fff;
+        font-family: inherit;
+      }
+
+      #streets-search-input:focus {
+        border-color: #285cd4;
+        box-shadow: 0 0 0 3px rgba(40, 92, 212, 0.12);
+      }
+
+      .streets-empty {
+        padding: 14px 12px;
+        color: #777;
+        font-size: 14px;
+      }
+
+      .streets-panel__body {
+        position: relative;
+        flex: 1;
+        overflow: auto;
+        padding: 10px 10px 18px;
+      }
+
+      /* верхний fade */
+      .streets-panel__body::before {
+        content: "";
+        position: sticky;
+        top: -10px;
+        display: block;
+        height: 24px;
+        /*margin-bottom: -24px;*/
+        pointer-events: none;
+        z-index: 10;
+        opacity: 0;
+        transition: opacity 0.15s ease;
+        background: linear-gradient(
+          to bottom,
+          rgba(81, 85, 92, 0.76),
+          rgba(255, 255, 255, 0)
+        );
+      }
+
+      /* нижний fade */
+      .streets-panel__body::after {
+        content: "";
+        position: sticky;
+        bottom: -20px;
+        display: block;
+        height: 24px;
+        /*margin-top: -24px;*/
+        pointer-events: none;
+        z-index: 10;
+        opacity: 0;
+        transition: opacity 0.15s ease;
+        background: linear-gradient(
+          to top,
+          rgba(81, 85, 92, 0.76),
+          rgba(255, 255, 255, 0)
+        );
+      }
+
+      .streets-panel__body.has-top-fade::before {
+        opacity: 1;
+      }
+
+      .streets-panel__body.has-bottom-fade::after {
+        opacity: 1;
+      }
+
+      @media (max-width: 900px) {
+        #streets-panel {
+          width: min(86vw, 340px);
+        }
+
+        #streets-panel-toggle {
+          left: calc(min(86vw, 340px) - 36px);
+        }
+
+        #streets-panel.is-collapsed + #streets-panel-toggle {
+          left: 0px;
+        }
+      }
+      .step-logo {
+        margin-left: 0.5em;
+        height: 1.1em;
+      }
+    </style>
+    <!--<script type="text/javascript" src="./src/index.js"></script>-->
+  </head>
+  <body>
+    <div id="streets-panel" class="is-collapsed">
+      <div class="streets-panel__header">
+        Улицы <img class="step-logo" src="./logo.svg" />
+      </div>
+
+      <div class="streets-panel__search">
+        <input
+          id="streets-search-input"
+          type="text"
+          placeholder="Поиск улицы..."
+          autocomplete="off"
+        />
+      </div>
+
+      <div id="streets-panel-body" class="streets-panel__body"></div>
+    </div>
+
+    <button
+      id="streets-panel-toggle"
+      type="button"
+      aria-label="Показать или скрыть список улиц"
+    >
+      ☰
+    </button>
+
+    <div id="map"></div>
+    <script src="./src/index.js" type="module"></script>
+  </body>
+</html>

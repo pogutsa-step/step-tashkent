@@ -49,6 +49,66 @@ let mirrorViewer = null;
 let mirrorsModeEnabled = false;
 
 // === PMTiles URLs ===
+/*
+const PMTILES_URLS = [
+  //МКАД
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Amir Temur - Aytmatov.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Aytmatov - Darkhon.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Babur%20-%20Rustaveli.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Beruni - Talabalar.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/DJI_202603141532_002_tow11-1 Bunedkor-stadion.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/DJI_202603141532_002_tow11-2 Bunedkor-stadion.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/DJI_202603151253_029_17 - Donish-MKAD.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Darkhon - Mustakillik.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Darvoza%20-%20Tashkucha.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Donish - Iftihor.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Iftihor - Amir Temur.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Kizil Takzar -Darvoza.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Lutfi - Kizil Takzar.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Mustakillik - Parkent.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Olmazor - Ahmad Donish.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Parkent - Abduli Kadiri.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Sagban - Olmazor.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Talabalar - Sagban.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Abdulli Kadiri - Sarikul.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Sarikul - Babur.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Sergeli - Bunedkor.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Tashkocha - Beruni.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Ахмат_Дониш_1.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Ахмат_Дониш_2.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Ахмат_Дониш_3.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Ахмат_Дониш_4.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Ислам_Каримов_1.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Ислам_Каримов_2.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Ислам_Каримов_3.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Махтумкули_1.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Махтумкули_2.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Махтумкули_3.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Махтумкули_4.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Махтумкули_5.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Нукус-1.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Нукус-2.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Нукус-3.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Нурафшон 1.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Нурафшон 10.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Нурафшон 11.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Нурафшон 2.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Нурафшон 3.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Нурафшон 4.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Нурафшон 5.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Нурафшон 6.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Нурафшон 7.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Нурафшон 8.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Нурафшон 9.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Ферганское_1.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Ферганское_2.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Ферганское_3.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Ферганское_4.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Ферганское_5.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Ферганское_6.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Ферганское_7.pmtiles",
+];
+*/
 const PMTILES_URLS = [
   "https://storage.yandexcloud.net/ts-tiles/tashkent-ortho/Abdulli Kadiri - Sarikul.pmtiles",
   "https://storage.yandexcloud.net/ts-tiles/tashkent-ortho/Amir Temur - Aytmatov.pmtiles",
@@ -106,7 +166,6 @@ const PMTILES_URLS = [
   "https://storage.yandexcloud.net/ts-tiles/tashkent-ortho/Ферганское_6.pmtiles",
   "https://storage.yandexcloud.net/ts-tiles/tashkent-ortho/Ферганское_7.pmtiles",
 ];
-
 const PMTILES_LAYER_IDS = PMTILES_URLS.map((_, i) => `pmtiles-${i}`);
 
 class BaseLayersControl {
@@ -350,11 +409,19 @@ if (streetsPanel && streetsPanelToggle) {
 }
 
 const TASHKENT_BORDERS_URL =
-  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260403_borders.geojson";
+  //"https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260403_borders.geojson";
+  "https://storage.yandexcloud.net/ts-tiles/tashkent-vector/260403_borders.geojson";
 
 const TASHKENT_OTHER_BORDERS_URL =
-  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260403_other_streets.geojson";
+  //"https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260403_other_streets.geojson";
+  "https://storage.yandexcloud.net/ts-tiles/tashkent-vector/260403_other_streets.geojson";
+const TASHKENT_AXISES_URL =
+  //"https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260331_axises.geojson",
+  "https://storage.yandexcloud.net/ts-tiles/tashkent_vector/260331_axises.geojson";
 
+const TASHKENT_MIRRORS_URL =
+  //"pmtiles://https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260403_tashkent_mirrors.pmtiles";
+  "pmtiles://https://storage.yandexcloud.net/ts-tiles/tashkent_vector/260403_tashkent_mirrors.pmtiles";
 map.on("load", async () => {
   const shadows = new BuildingShadowsLayer({
     id: "bldg-shadows",
@@ -480,7 +547,7 @@ map.on("load", async () => {
 
   map.addSource("tashkent-lines", {
     type: "geojson",
-    data: "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260331_axises.geojson",
+    data: TASHKENT_AXISES_URL,
   });
 
   map.addLayer({
@@ -570,7 +637,7 @@ map.on("load", async () => {
   */
   map.addSource("mirrors", {
     type: "vector",
-    url: "pmtiles://https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260403_tashkent_mirrors.pmtiles",
+    url: TASHKENT_MIRRORS_URL,
     minzoom: 16,
   });
 

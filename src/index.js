@@ -417,11 +417,11 @@ const TASHKENT_OTHER_BORDERS_URL =
   "https://storage.yandexcloud.net/ts-tiles/tashkent-vector/260403_other_streets.geojson";
 const TASHKENT_AXISES_URL =
   //"https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260331_axises.geojson",
-  "https://storage.yandexcloud.net/ts-tiles/tashkent_vector/260331_axises.geojson";
+  "https://storage.yandexcloud.net/ts-tiles/tashkent-vector/260331_axises.geojson";
 
 const TASHKENT_MIRRORS_URL =
   //"pmtiles://https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260403_tashkent_mirrors.pmtiles";
-  "pmtiles://https://storage.yandexcloud.net/ts-tiles/tashkent_vector/260403_tashkent_mirrors.pmtiles";
+  "pmtiles://https://storage.yandexcloud.net/ts-tiles/tashkent-vector/260403_tashkent_mirrors.pmtiles";
 map.on("load", async () => {
   const shadows = new BuildingShadowsLayer({
     id: "bldg-shadows",

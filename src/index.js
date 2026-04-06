@@ -3,12 +3,31 @@ import { BuildingShadowsLayer } from "./shadows.dev.js";
 import { setupTwoFingerRuler } from "./maplibre-ruler.js";
 import { setupMirrorViewer } from "./mirror-viewer.js";
 import { installYandex3395Protocol } from "./yandex3395-protocol.js";
+import { setupPanoramaViewer } from "./panorama-viewer-prod.js";
+
+const TASHKENT_BORDERS_URL =
+  //"https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260403_borders.geojson";
+  "https://storage.yandexcloud.net/ts-tiles/tashkent-vector/260403_borders.geojson";
+
+const TASHKENT_OTHER_BORDERS_URL =
+  //"https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260403_other_streets.geojson";
+  "https://storage.yandexcloud.net/ts-tiles/tashkent-vector/260403_other_streets.geojson";
+const TASHKENT_AXISES_URL =
+  //"https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260331_axises.geojson",
+  "https://storage.yandexcloud.net/ts-tiles/tashkent-vector/260331_axises.geojson";
+
+const TASHKENT_MIRRORS_URL =
+  //"pmtiles://https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260403_tashkent_mirrors.pmtiles";
+  "pmtiles://https://storage.yandexcloud.net/ts-tiles/tashkent-vector/260403_tashkent_mirrors.pmtiles";
+
+const TASHKENT_PANORAMAS_URL =
+  "https://storage.yandexcloud.net/ts-tiles/tashkent-pano/merged.pmtiles";
+
+// --- main -------------------------------------------------------------------
 
 const isMobile =
   /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
   window.innerWidth < 900;
-
-// --- main -------------------------------------------------------------------
 
 let viewState = {
   longitude: 69.248161,
@@ -34,6 +53,7 @@ var map = new maplibregl.Map({
   bearingSnap: 5,
   antialias: !isMobile,
   touchPitch: !isMobile,
+  dragRotate: false,
   preserveDrawingBuffer: false,
 });
 
@@ -47,6 +67,9 @@ window.mapboxgl = maplibregl;
 
 let mirrorViewer = null;
 let mirrorsModeEnabled = false;
+
+let panoramaViewer = null;
+let panoramasModeEnabled = false;
 
 // === PMTiles URLs ===
 /*
@@ -214,6 +237,16 @@ class BaseLayersControl {
     this._mirrorsButton.style.height = "30px";
     this._mirrorsButton.style.fontSize = "16px";
 
+    this._panoramasButton = document.createElement("button");
+    this._panoramasButton.type = "button";
+    this._panoramasButton.title = "Панорамы";
+    this._panoramasButton.setAttribute("aria-label", "Панорамы");
+    this._panoramasButton.innerHTML =
+      '<i class="fa fa-street-view" aria-hidden="true"></i>';
+    this._panoramasButton.style.width = "30px";
+    this._panoramasButton.style.height = "30px";
+    this._panoramasButton.style.fontSize = "16px";
+
     const isLayerVisible = (layerId) => {
       if (!this._map.getLayer(layerId)) return false;
       return this._map.getLayoutProperty(layerId, "visibility") === "visible";
@@ -255,6 +288,10 @@ class BaseLayersControl {
         : "";
 
       this._mirrorsButton.style.backgroundColor = mirrorsModeEnabled
+        ? "#22966fa5"
+        : "";
+
+      this._panoramasButton.style.backgroundColor = panoramasModeEnabled
         ? "#22966fa5"
         : "";
     };
@@ -313,11 +350,37 @@ class BaseLayersControl {
       syncButtons();
     });
 
+    this._panoramasButton.addEventListener("click", () => {
+      const next = !panoramasModeEnabled;
+      panoramasModeEnabled = next;
+
+      if (next) {
+        setLayerVisibility("sat", false);
+        setLayerVisibility("yandex-map", false);
+
+        if (this._map.getZoom() < 16) {
+          this._map.easeTo({
+            zoom: 16,
+            duration: 500,
+            essential: true,
+          });
+        }
+
+        panoramaViewer?.enable?.();
+      } else {
+        panoramaViewer?.disable?.();
+      }
+
+      syncButtons();
+    });
+
     this._container.appendChild(this._satButton);
     this._container.appendChild(this._mapButton);
     this._container.appendChild(this._orthoButton);
+
     if (!isMobile) {
       this._container.appendChild(this._mirrorsButton);
+      this._container.appendChild(this._panoramasButton);
     }
 
     this._onIdle = () => syncButtons();
@@ -343,8 +406,8 @@ class BaseLayersControl {
 
 map.addControl(new BaseLayersControl(), "top-right");
 
-let nav = new maplibregl.NavigationControl();
-map.addControl(nav, "top-right");
+//let nav = new maplibregl.NavigationControl();
+//map.addControl(nav, "top-right");
 
 // ✅ GeolocateControl — уже внутри maplibregl
 
@@ -408,21 +471,10 @@ if (streetsPanel && streetsPanelToggle) {
   }
 }
 
-const TASHKENT_BORDERS_URL =
-  //"https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260403_borders.geojson";
-  "https://storage.yandexcloud.net/ts-tiles/tashkent-vector/260403_borders.geojson";
-
-const TASHKENT_OTHER_BORDERS_URL =
-  //"https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260403_other_streets.geojson";
-  "https://storage.yandexcloud.net/ts-tiles/tashkent-vector/260403_other_streets.geojson";
-const TASHKENT_AXISES_URL =
-  //"https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260331_axises.geojson",
-  "https://storage.yandexcloud.net/ts-tiles/tashkent-vector/260331_axises.geojson";
-
-const TASHKENT_MIRRORS_URL =
-  //"pmtiles://https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260403_tashkent_mirrors.pmtiles";
-  "pmtiles://https://storage.yandexcloud.net/ts-tiles/tashkent-vector/260403_tashkent_mirrors.pmtiles";
 map.on("load", async () => {
+  const panoIcon = await map.loadImage("./src/icon-pano.png");
+  map.addImage("panoIcon", panoIcon.data);
+
   const shadows = new BuildingShadowsLayer({
     id: "bldg-shadows",
     sourceId: "openmaptiles",
@@ -660,6 +712,16 @@ map.on("load", async () => {
   mirrorViewer = setupMirrorViewer(map, {
     pointsLayerId: "mirrors-points",
     workerBaseUrl: "https://mirrors-api.yanpogutsa.workers.dev",
+  });
+
+  //const panoramasResp = await fetch(TASHKENT_PANORAMAS_URL);
+  //const panoramasGeojson = await panoramasResp.json();
+
+  panoramaViewer = setupPanoramaViewer(map, {
+    pointsSourceId: "panoramas",
+    pointsLayerId: "panoramas-points",
+    pointsData: TASHKENT_PANORAMAS_URL,
+    minZoom: 16,
   });
 
   const bordersResp = await fetch(TASHKENT_BORDERS_URL);
@@ -917,7 +979,7 @@ function buildStreetsPanel(featureCollection) {
 }
 
 map.on("click", "tashkent-borders", (e) => {
-  if (ruler.isEnabled?.() || mirrorsModeEnabled) return;
+  if (ruler.isEnabled?.() || mirrorsModeEnabled || panoramasModeEnabled) return;
 
   const feature = e.features?.[0];
   if (!feature) return;
@@ -926,7 +988,7 @@ map.on("click", "tashkent-borders", (e) => {
 });
 
 map.on("click", "tashkent-other-borders", (e) => {
-  if (ruler.isEnabled?.() || mirrorsModeEnabled) return;
+  if (ruler.isEnabled?.() || mirrorsModeEnabled || panoramasModeEnabled) return;
 
   const topFeature = map.queryRenderedFeatures(e.point, {
     layers: ["tashkent-borders", "tashkent-other-borders"],
@@ -941,7 +1003,7 @@ map.on("click", "tashkent-other-borders", (e) => {
 });
 
 map.on("click", (e) => {
-  if (ruler.isEnabled?.() || mirrorsModeEnabled) return;
+  if (ruler.isEnabled?.() || mirrorsModeEnabled || panoramasModeEnabled) return;
 
   const features = map.queryRenderedFeatures(e.point, {
     layers: ["tashkent-borders", "tashkent-other-borders"],
@@ -976,22 +1038,22 @@ function clearBorderSelection() {
 }
 
 map.on("mouseenter", "tashkent-borders", () => {
-  if (ruler.isEnabled?.() || mirrorsModeEnabled) return;
+  if (ruler.isEnabled?.() || mirrorsModeEnabled || panoramasModeEnabled) return;
   map.getCanvas().style.cursor = "pointer";
 });
 
 map.on("mouseleave", "tashkent-borders", () => {
-  if (ruler.isEnabled?.() || mirrorsModeEnabled) return;
+  if (ruler.isEnabled?.() || mirrorsModeEnabled || panoramasModeEnabled) return;
   map.getCanvas().style.cursor = "";
 });
 
 map.on("mouseenter", "tashkent-other-borders", () => {
-  if (ruler.isEnabled?.() || mirrorsModeEnabled) return;
+  if (ruler.isEnabled?.() || mirrorsModeEnabled || panoramasModeEnabled) return;
   map.getCanvas().style.cursor = "pointer";
 });
 
 map.on("mouseleave", "tashkent-other-borders", () => {
-  if (ruler.isEnabled?.() || mirrorsModeEnabled) return;
+  if (ruler.isEnabled?.() || mirrorsModeEnabled || panoramasModeEnabled) return;
   map.getCanvas().style.cursor = "";
 });
 

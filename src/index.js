@@ -849,7 +849,7 @@ map.on("load", async () => {
 
   initComments(map, deckOverlay, {
     name: "tashkent",
-    minDrawZoom: 16,
+    minDrawZoom: 14.8,
     dom: {
       addCommentButton: document.getElementById("addCommentBtn"),
       drawButton: document.getElementById("drawFreehandBtn"),
@@ -903,7 +903,7 @@ map.on("load", async () => {
 
       deleteOne: async (project, id) => {
         const res = await fetch(
-          `${API_BASE}/comments/${encodeURIComponent(id)}?project=${encodeURIComponent(project)}`,
+          `${API_BASE}/comments?project=${encodeURIComponent(project)}&id=${encodeURIComponent(id)}`,
           { method: "DELETE" },
         );
 

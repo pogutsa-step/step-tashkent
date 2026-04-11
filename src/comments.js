@@ -1507,12 +1507,14 @@ export function initComments(map, deck, options = {}) {
     toggleComments();
   });
 
-  map.on("move", () => {
+  map.on("moveend", () => {
     if (!showComments) return;
-    toggleComments();
-    /*updateSource();
+    //toggleComments();
+
+    updateSource();
+    updatePopupScales();
     _refreshCommentsDeck();
-    _refreshFreehandDeck();*/
+    _refreshFreehandDeck();
   });
 
   function toggleComments() {

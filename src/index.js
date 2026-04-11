@@ -540,11 +540,6 @@ const STORAGE_CONFIG = {
   publicBaseUrl: "https://storage.yandexcloud.net/ts-tiles",
   projectsPrefix: "tashkent-vector/projects",
   indexKey: "tashkent-vector/260403_project_index.json",
-
-  // MVP: временно храним на фронте.
-  // Потом вынесешь в function / presigned URLs.
-  accessKeyId: "YCAJE2gKkBvJ3PrfV8MR1sx4Q",
-  secretAccessKey: "YCOPWqG4jYqd5yVOs9gN7-T07lVtYkfuOpd1KQyU",
 };
 
 function ensureGdal() {

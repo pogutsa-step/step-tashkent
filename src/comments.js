@@ -7,11 +7,17 @@ export function initComments(map, deck, options = {}) {
     minDrawZoom = 16,
     dom = {},
     storage = {},
+    spatial = {},
+    hooks = {},
   } = options;
 
   const { addCommentButton = null, drawButton = null } = dom;
   const { loadAll = null, saveOne = null, deleteOne = null } = storage;
   const drawBtn = drawButton;
+
+  const { bordersGeojson = null, streetNameProp = "Name" } = spatial;
+
+  const { onCommentsStateChange = null } = hooks;
 
   const defColor = "rgb(0, 41, 112)"; //rgb(37, 147, 110)
 
@@ -20,6 +26,7 @@ export function initComments(map, deck, options = {}) {
   let activePopupElement = null;
   let activePopups = [];
   let commentFeatures = [];
+  let commentsByStreet = new Map();
   let draggingPopup = null;
   let draggingPopupIndex = null;
   let isDragging = false;
@@ -153,6 +160,130 @@ export function initComments(map, deck, options = {}) {
       console.error("Delete failed:", err);
       showToast("Ошибка удаления");
     }
+  }
+
+  function getPointStreetName(feature) {
+    if (!bordersGeojson?.features?.length) return null;
+    if (feature?.geometry?.type !== "Point") return null;
+
+    const coords = feature.geometry.coordinates;
+    if (!Array.isArray(coords) || coords.length < 2) return null;
+
+    const pt = turf.point(coords);
+
+    for (const borderFeature of bordersGeojson.features) {
+      if (!borderFeature?.geometry) continue;
+
+      try {
+        if (turf.booleanPointInPolygon(pt, borderFeature)) {
+          return borderFeature.properties?.[streetNameProp] || null;
+        }
+      } catch (err) {
+        console.warn("[comments] point-in-polygon failed:", err);
+      }
+    }
+
+    return null;
+  }
+
+  function ensureCommentStreetAssignment(feature) {
+    if (!feature?.properties) feature.properties = {};
+    if (feature?.geometry?.type !== "Point") return null;
+
+    const streetName = getPointStreetName(feature);
+    feature.properties.streetName = streetName || null;
+    return streetName;
+  }
+
+  function rebuildCommentsByStreet() {
+    commentsByStreet = new Map();
+
+    for (const feature of commentFeatures) {
+      if (feature?.geometry?.type !== "Point") continue;
+
+      const streetName =
+        feature.properties?.streetName ||
+        ensureCommentStreetAssignment(feature);
+
+      if (!streetName) continue;
+
+      if (!commentsByStreet.has(streetName)) {
+        commentsByStreet.set(streetName, []);
+      }
+
+      commentsByStreet.get(streetName).push(feature);
+    }
+
+    for (const items of commentsByStreet.values()) {
+      items.sort((a, b) => {
+        const ad = a?.properties?.createdAt || "";
+        const bd = b?.properties?.createdAt || "";
+        return bd.localeCompare(ad);
+      });
+    }
+  }
+
+  function emitCommentsState() {
+    if (typeof onCommentsStateChange !== "function") return;
+
+    const streets = {};
+
+    for (const [streetName, items] of commentsByStreet.entries()) {
+      const unresolved = items.filter((f) => !f?.properties?.resolved).length;
+
+      streets[streetName] = {
+        total: items.length,
+        unresolved,
+        items: items.map((f) => ({
+          id: f?.properties?.id,
+          text: f?.properties?.text || "",
+          resolved: !!f?.properties?.resolved,
+          streetName: f?.properties?.streetName || streetName,
+          coordinates: f?.geometry?.coordinates || null,
+          popupOffset: f?.properties?.popupOffset || null,
+          createdAt: f?.properties?.createdAt || null,
+        })),
+      };
+    }
+
+    onCommentsStateChange({ streets });
+  }
+
+  function syncStreetCommentsState() {
+    rebuildCommentsByStreet();
+    emitCommentsState();
+  }
+
+  function focusCommentById(id) {
+    const feature = commentFeatures.find((f) => f?.properties?.id === id);
+    if (!feature) return false;
+
+    if (!showComments) {
+      showComments = true;
+    }
+
+    const centerCoords =
+      feature.properties?.popupOffset || feature.geometry?.coordinates;
+
+    if (!centerCoords) return false;
+
+    if (map.getZoom() < minDrawZoom) {
+      map.jumpTo({
+        center: centerCoords,
+        zoom: minDrawZoom,
+      });
+    } else {
+      map.easeTo({
+        center: centerCoords,
+        zoom: Math.max(map.getZoom(), minDrawZoom),
+        duration: 300,
+      });
+    }
+
+    toggleComments();
+    refreshPopupById(id);
+
+    return true;
   }
 
   function _hexToRgba255(hex, a = 255) {
@@ -719,8 +850,10 @@ export function initComments(map, deck, options = {}) {
       };
       console.log(feature);
 
+      ensureCommentStreetAssignment(feature);
       commentFeatures.push(feature);
       scheduleFeatureSave(feature);
+      syncStreetCommentsState();
       updateAllCurves();
       refreshPopupById(feature.properties.id);
       popup.remove();
@@ -1233,7 +1366,8 @@ export function initComments(map, deck, options = {}) {
     if (target.classList.contains("delete-comment")) {
       var confirmDelete = confirm("Удалить комментарий?");
       if (confirmDelete) {
-        commentFeatures.splice(idx, 1);
+        const removed = commentFeatures.splice(idx, 1)[0];
+
         const popup = activePopups.find(
           (p) => p.index === feature.properties.id,
         );
@@ -1241,7 +1375,13 @@ export function initComments(map, deck, options = {}) {
         activePopups = activePopups.filter(
           (p) => p.index !== feature.properties.id,
         );
+
         void removeFeatureFromStorage(feature.properties.id);
+
+        if (removed?.geometry?.type === "Point") {
+          syncStreetCommentsState();
+        }
+
         updateAllCurves();
       }
     }
@@ -1413,6 +1553,11 @@ export function initComments(map, deck, options = {}) {
     if (target.classList.contains("resolve-comment")) {
       feature.properties.resolved = !feature.properties.resolved;
       scheduleFeatureSave(feature);
+
+      if (feature?.geometry?.type === "Point") {
+        syncStreetCommentsState();
+      }
+
       refreshPopupById(feature.properties.id);
       updateAllCurves();
     }
@@ -1587,6 +1732,14 @@ export function initComments(map, deck, options = {}) {
         .filter((item) => item?.entityType === "comment")
         .map((item) => item.feature)
         .filter(Boolean);
+
+      commentFeatures.forEach((feature) => {
+        if (feature?.geometry?.type === "Point") {
+          ensureCommentStreetAssignment(feature);
+        }
+      });
+
+      syncStreetCommentsState();
 
       drawnLines = items
         .filter((item) => item?.entityType === "line")
@@ -1990,6 +2143,25 @@ export function initComments(map, deck, options = {}) {
     button.style.setProperty("--x", `${x}px`);
     button.style.setProperty("--y", `${y}px`);
   });
+
+  return {
+    focusCommentById,
+    getStreetCommentsState() {
+      const streets = {};
+      for (const [streetName, items] of commentsByStreet.entries()) {
+        streets[streetName] = {
+          total: items.length,
+          unresolved: items.filter((f) => !f?.properties?.resolved).length,
+          items: items.map((f) => ({
+            id: f?.properties?.id,
+            text: f?.properties?.text || "",
+            resolved: !!f?.properties?.resolved,
+          })),
+        };
+      }
+      return { streets };
+    },
+  };
 }
 
 let _uuidCounter = 0;

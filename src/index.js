@@ -561,6 +561,9 @@ function ensureGdal() {
 }
 
 let bordersGeojson = null;
+let commentsApi = null;
+let streetCommentsState = { streets: {} };
+let expandedStreetComments = new Set();
 
 const streetsPanel = document.getElementById("streets-panel");
 const streetsPanelBody = document.getElementById("streets-panel-body");
@@ -582,6 +585,53 @@ function updateScrollFades() {
 
   streetsPanelBody.classList.toggle("has-top-fade", hasTop);
   streetsPanelBody.classList.toggle("has-bottom-fade", hasBottom);
+}
+
+function getStreetCommentsMeta(streetName) {
+  return streetCommentsState?.streets?.[streetName] || null;
+}
+
+function escapeCommentText(value) {
+  return escapeHtml(String(value || ""));
+}
+
+function handleStreetCommentsStateChange(nextState) {
+  streetCommentsState = nextState || { streets: {} };
+  buildStreetsPanel(bordersGeojson, projectIndex);
+}
+
+function toggleStreetCommentsExpanded(streetName) {
+  if (expandedStreetComments.has(streetName)) {
+    expandedStreetComments.delete(streetName);
+  } else {
+    expandedStreetComments.add(streetName);
+  }
+  buildStreetsPanel(bordersGeojson, projectIndex);
+}
+
+function renderStreetCommentsList(container, streetName) {
+  const meta = getStreetCommentsMeta(streetName);
+  if (!container) return;
+
+  if (!meta?.items?.length) {
+    container.innerHTML = "";
+    return;
+  }
+
+  container.innerHTML = meta.items
+    .map(
+      (item) => `
+        <button
+          type="button"
+          class="street-comment-item ${item.resolved ? "is-resolved" : "is-unresolved"}"
+          data-comment-id="${escapeAttr(item.id)}"
+          title="${escapeAttr(item.text || "")}"
+        >
+          ${escapeCommentText(item.text || "Без текста")}
+        </button>
+      `,
+    )
+    .join("");
 }
 
 if (streetsPanel && streetsPanelToggle) {
@@ -693,22 +743,6 @@ map.on("load", async () => {
     },
     "road_label",
   );
-  /*
-  initComments(map, {
-    name: "Mayline",
-    toggleButtonId: "toggleComments",
-    addCommentButtonId: "addCommentBtn",
-    uploadButtonId: "uploadComments",
-    screenOutlineId: "screenOutline",
-    panelId: "commentsPanel",
-    github: {
-      owner: GITHUB_OWNER,
-      repo: GITHUB_REPO,
-      filepath: "Zharokova.geojson",
-      token: GITHUB_TOKEN,
-    },
-  });
-  */
 
   // добавить все слои
   addPmtilesLayers(PMTILES_URLS);
@@ -855,7 +889,7 @@ map.on("load", async () => {
   projectIndex = await loadProjectIndexSafe();
   buildStreetsPanel(bordersGeojson, projectIndex);
 
-  initComments(map, deckOverlay, {
+  commentsApi = initComments(map, deckOverlay, {
     name: "tashkent",
     minDrawZoom: 14.8,
     dom: {
@@ -930,6 +964,13 @@ map.on("load", async () => {
         }
       },
     },
+    spatial: {
+      bordersGeojson,
+      streetNameProp: "Name",
+    },
+    hooks: {
+      onCommentsStateChange: handleStreetCommentsStateChange,
+    },
   });
 });
 
@@ -945,7 +986,7 @@ function filterStreetsPanel(query) {
   let hasAnyVisible = false;
 
   groups.forEach((groupEl) => {
-    const items = groupEl.querySelectorAll(".street-item");
+    const items = groupEl.querySelectorAll(".street-item-wrap");
     let visibleCount = 0;
 
     items.forEach((itemEl) => {
@@ -1403,41 +1444,98 @@ function buildStreetsPanel(featureCollection, projectIndexArg = null) {
 
     for (const feature of features) {
       const props = feature.properties || {};
+      const name = props.Name || "Без названия";
+      const hasProject = !!projectIndexArg?.items?.[name];
+      const isVisible = getStreetProjectVisible(name);
+
+      const commentsMeta = getStreetCommentsMeta(name);
+      const commentsCount = commentsMeta?.total || 0;
+      const hasUnresolvedComments = (commentsMeta?.unresolved || 0) > 0;
+      const commentsExpanded = expandedStreetComments.has(name);
+
+      const itemWrapEl = document.createElement("div");
+      itemWrapEl.className = "street-item-wrap";
+      itemWrapEl.dataset.name = name;
+
       const itemEl = document.createElement("button");
       itemEl.type = "button";
       itemEl.className = "street-item";
       itemEl.dataset.name = props.Name || "";
 
-      const number = props.Number ?? "";
-      const name = props.Name || "Без названия";
-
-      // <span class="street-item__number">${escapeHtml(String(number))}</span>
-
-      const hasProject = !!projectIndexArg?.items?.[name];
-      const isVisible = getStreetProjectVisible(name);
-
       itemEl.innerHTML = `
         <span class="street-item__label">${escapeHtml(name)}</span>
-        ${
-          hasProject
-            ? `<button
-                 type="button"
-                 class="street-project-toggle"
-                 data-project-name="${escapeAttr(name)}"
-                 title="${isVisible ? "Скрыть проект" : "Показать проект"}"
-                 style="color: ${isVisible ? "black" : "grey"}"
-               >
-                 <i class="fa ${isVisible ? "fa-eye" : "fa-eye-slash"}" aria-hidden="true"></i>
-               </button>`
-            : ``
-        }
+        <span class="street-item__actions" style="margin-left:auto; display:flex; align-items:center; gap:6px;">
+          ${
+            commentsCount > 0
+              ? `<button
+                   type="button"
+                   class="street-comments-toggle ${commentsExpanded ? "active" : ""}"
+                   data-street-name="${escapeAttr(name)}"
+                   title="Комментарии по улице"
+                 >
+                   <span class="street-comments-count">${commentsCount}</span>
+                   ${
+                     hasUnresolvedComments
+                       ? `<span class="street-comments-alert" title="Есть нерешённые комментарии"><i class="fa fa-exclamation" aria-hidden="true"></i></span>`
+                       : ``
+                   }
+                 </button>`
+              : ``
+          }
+          ${
+            hasProject
+              ? `<button
+                   type="button"
+                   class="street-project-toggle"
+                   data-project-name="${escapeAttr(name)}"
+                   title="${isVisible ? "Скрыть проект" : "Показать проект"}"
+                 >
+                   <i class="fa ${isVisible ? "fa-eye" : "fa-eye-slash"}" aria-hidden="true"></i>
+                 </button>`
+              : ``
+          }
+        </span>
       `;
 
       itemEl.addEventListener("click", () => {
         selectBorderFeature(feature, { flyToFeature: true });
       });
 
+      const commentsListEl = document.createElement("div");
+      commentsListEl.className = "street-comments-list";
+      commentsListEl.style.display = commentsExpanded ? "flex" : "none";
+
+      if (commentsExpanded) {
+        renderStreetCommentsList(commentsListEl, name);
+      }
+
+      itemWrapEl.appendChild(itemEl);
+      itemWrapEl.appendChild(commentsListEl);
+
+      const commentsToggleBtn = itemEl.querySelector(".street-comments-toggle");
+      if (commentsToggleBtn) {
+        commentsToggleBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleStreetCommentsExpanded(name);
+        });
+      }
+
+      commentsListEl.addEventListener("click", (e) => {
+        const btn = e.target.closest(".street-comment-item");
+        if (!btn) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const commentId = btn.dataset.commentId;
+        if (!commentId) return;
+
+        commentsApi?.focusCommentById?.(commentId);
+      });
+
       const toggleBtn = itemEl.querySelector(".street-project-toggle");
+
       if (toggleBtn) {
         toggleBtn.addEventListener("click", async (e) => {
           e.preventDefault();
@@ -1460,7 +1558,7 @@ function buildStreetsPanel(featureCollection, projectIndexArg = null) {
         });
       }
 
-      listEl.appendChild(itemEl);
+      listEl.appendChild(itemWrapEl);
     }
 
     groupEl.appendChild(titleEl);

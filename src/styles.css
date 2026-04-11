@@ -1179,3 +1179,82 @@ body {
   width: 64px;
   height: 64px;
 }
+
+.street-item-wrap {
+  display: block;
+}
+
+.street-comments-toggle {
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  color: #1f4fa3;
+  width: 34px;
+  height: 26px;
+  font-size: 12px;
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: nowrap;
+  align-content: center;
+  align-items: center;
+  justify-content: center;
+  flex-direction: row;
+}
+.street-comments-toggle.active {
+  background: white;
+  border-radius: 8px 8px 0px 0px;
+}
+.street-comments-toggle:hover {
+  background: #b7babc;
+}
+
+.street-comments-count {
+  font-weight: 600;
+}
+
+.street-comments-alert {
+  color: #1f4fa3;
+  font-weight: 700;
+  margin-left: 2px;
+  margin-right: 2px;
+  padding: 2px 4px;
+  background: white;
+  border-radius: 5px;
+}
+
+.street-comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+}
+
+.street-comment-item {
+  border: none;
+  background: #ffffff7d;
+  padding: 6px;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  border-radius: 6px;
+  text-overflow: ellipsis;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: background 0.2s;
+}
+
+.street-comment-item:hover {
+  background: white;
+}
+
+.street-comment-item.is-unresolved {
+  color: #285cd4;
+}
+
+.street-comment-item.is-resolved {
+  color: white;
+}

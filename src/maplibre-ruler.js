@@ -666,6 +666,7 @@ export function setupTwoFingerRuler(map, turf, options = {}) {
       this._button.style.height = "30px";
       this._button.style.fontSize = "16px";
       this._button.style.lineHeight = "30px";
+      this._button.style.color = "black";
       this._button.innerHTML =
         '<i class="fa fa-arrows-h" aria-hidden="true"></i>';
       ("");

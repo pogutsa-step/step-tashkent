@@ -231,6 +231,7 @@ class BaseLayersControl {
     this._satButton.style.width = "30px";
     this._satButton.style.height = "30px";
     this._satButton.style.fontSize = "16px";
+    this._satButton.style.color = "black";
 
     this._mapButton = document.createElement("button");
     this._mapButton.type = "button";
@@ -240,6 +241,7 @@ class BaseLayersControl {
     this._mapButton.style.width = "30px";
     this._mapButton.style.height = "30px";
     this._mapButton.style.fontSize = "16px";
+    this._mapButton.style.color = "black";
 
     this._orthoButton = document.createElement("button");
     this._orthoButton.type = "button";
@@ -250,6 +252,7 @@ class BaseLayersControl {
     this._orthoButton.style.width = "30px";
     this._orthoButton.style.height = "30px";
     this._orthoButton.style.fontSize = "16px";
+    this._orthoButton.style.color = "black";
 
     this._mirrorsButton = document.createElement("button");
     this._mirrorsButton.type = "button";
@@ -260,6 +263,7 @@ class BaseLayersControl {
     this._mirrorsButton.style.width = "30px";
     this._mirrorsButton.style.height = "30px";
     this._mirrorsButton.style.fontSize = "16px";
+    this._mirrorsButton.style.color = "black";
 
     this._panoramasButton = document.createElement("button");
     this._panoramasButton.type = "button";
@@ -270,6 +274,7 @@ class BaseLayersControl {
     this._panoramasButton.style.width = "30px";
     this._panoramasButton.style.height = "30px";
     this._panoramasButton.style.fontSize = "16px";
+    this._panoramasButton.style.color = "black";
 
     this._commentsToggleButton = document.createElement("button");
     this._commentsToggleButton.type = "button";
@@ -281,6 +286,7 @@ class BaseLayersControl {
     this._commentsToggleButton.style.width = "30px";
     this._commentsToggleButton.style.height = "30px";
     this._commentsToggleButton.style.fontSize = "16px";
+    this._commentsToggleButton.style.color = "black";
 
     this._commentsAddButton = document.createElement("button");
     this._commentsAddButton.type = "button";
@@ -292,6 +298,7 @@ class BaseLayersControl {
     this._commentsAddButton.style.width = "30px";
     this._commentsAddButton.style.height = "30px";
     this._commentsAddButton.style.fontSize = "16px";
+    this._commentsAddButton.style.color = "black";
 
     this._commentsDrawButton = document.createElement("button");
     this._commentsDrawButton.type = "button";
@@ -303,6 +310,7 @@ class BaseLayersControl {
     this._commentsDrawButton.style.width = "30px";
     this._commentsDrawButton.style.height = "30px";
     this._commentsDrawButton.style.fontSize = "16px";
+    this._commentsDrawButton.style.color = "black";
 
     this._commentsAddButton.style.display = "none";
     this._commentsDrawButton.style.display = "none";
@@ -1417,6 +1425,7 @@ function buildStreetsPanel(featureCollection, projectIndexArg = null) {
                  class="street-project-toggle"
                  data-project-name="${escapeAttr(name)}"
                  title="${isVisible ? "Скрыть проект" : "Показать проект"}"
+                 style="color: ${isVisible ? "black" : "grey"}"
                >
                  <i class="fa ${isVisible ? "fa-eye" : "fa-eye-slash"}" aria-hidden="true"></i>
                </button>`
@@ -1442,6 +1451,7 @@ function buildStreetsPanel(featureCollection, projectIndexArg = null) {
               icon.className = `fa ${visible ? "fa-eye" : "fa-eye-slash"}`;
             }
             toggleBtn.title = visible ? "Скрыть проект" : "Показать проект";
+            toggleBtn.style.color = visible ? "black" : "grey";
           } catch (err) {
             console.error("[street-project-toggle]", err);
           } finally {

@@ -249,8 +249,7 @@ export function initComments(map, deck, options = {}) {
   }
 
   function syncCommentsInteractionState() {
-    window.__commentsBlockingMapInteractions =
-      showComments && (addingCommentMode || drawingMode);
+    window.__commentsBlockingMapInteractions = showComments; // && (addingCommentMode || drawingMode);
   }
 
   function resetCommentModes() {

@@ -528,7 +528,7 @@ let activeBorderPopup = null;
 let activePopupWidget = null;
 let gdalPromise = null;
 
-const DXF_WIDGET_PASSWORD = "1234";
+const DXF_WIDGET_PASSWORD = "667";
 const DXF_PROJ4 = `
 +proj=tmerc +lat_0=0 +lon_0=69 +k=1 +x_0=12500000 +y_0=0 +ellps=krass +towgs84=15,-130,-84 +units=m +no_defs
 `.trim();
@@ -1473,9 +1473,10 @@ function buildStreetsPanel(featureCollection, projectIndexArg = null) {
 }
 
 map.on("click", "tashkent-borders", (e) => {
-  if (ruler.isEnabled?.() || mirrorsModeEnabled || panoramasModeEnabled)
-    if (window.__commentsBlockingMapInteractions) return;
-  return;
+  if (ruler.isEnabled?.() || mirrorsModeEnabled || panoramasModeEnabled) return;
+  if (window.__commentsBlockingMapInteractions) return;
+
+  console.log(window.__commentsBlockingMapInteractions);
 
   const feature = e.features?.[0];
   if (!feature) return;
@@ -1484,9 +1485,8 @@ map.on("click", "tashkent-borders", (e) => {
 });
 
 map.on("click", "tashkent-other-borders", (e) => {
-  if (ruler.isEnabled?.() || mirrorsModeEnabled || panoramasModeEnabled)
-    if (window.__commentsBlockingMapInteractions) return;
-  return;
+  if (ruler.isEnabled?.() || mirrorsModeEnabled || panoramasModeEnabled) return;
+  if (window.__commentsBlockingMapInteractions) return;
 
   const topFeature = map.queryRenderedFeatures(e.point, {
     layers: ["tashkent-borders", "tashkent-other-borders"],

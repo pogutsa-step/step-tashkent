@@ -1,9 +1,14 @@
 @import url("https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..900&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap");
 
+:root {
+  --primary-color: rgba(0, 41, 112, 0.6); /*rgba(37, 147, 110, 0.6)*/
+}
+
 body {
   font-family: sans-serif;
   overscroll-behavior-y: contain;
 }
+
 /*
 #panel {
   position: absolute;
@@ -157,7 +162,7 @@ body {
   max-width: 132px;
   /* margin: 4px;*/
   height: 0px;
-  transition: height 0.3s ease-in-out;
+  transition: height 0.15s ease-in-out;
 }
 #commentsPanel button {
   margin: 4px;
@@ -169,8 +174,8 @@ body {
   flex-direction: column;
   align-items: stretch;
   max-width: 132px;
-  height: 0px;
-  transition: height 0.3s ease-in-out;
+  height: auto;
+  transition: height 0.15s ease-in-out;
 }
 #layersPanel .project-toggle {
   display: flex;
@@ -374,8 +379,21 @@ body {
   box-shadow: 1px 1px 4px rgba(0, 0, 0, 0.2);
 }
 */
+/*
+.popups-gestures-off .mapboxgl-popup,
+.popups-gestures-off .maplibregl-popup {
+  pointer-events: none !important;
+}
+
+.popups-gestures-off .maplibregl-popup-content,
+.popups-gestures-off .maplibregl-popup-content {
+  pointer-events: none !important;
+}
+*/
+
 .maplibregl-popup {
   z-index: 10000;
+  pointer-events: none;
 }
 .maplibregl-popup.comment-popup {
   max-width: 340px !important;
@@ -426,7 +444,7 @@ body {
   padding: 0;
   outline: 2px solid rgb(255 255 255 / 40%);
   border-radius: 14px;
-  background-color: rgba(37, 147, 110, 0.6);
+  background-color: var(--primary-color);
   font-family: "Golos Text", sans-serif;
   color: white;
   transform-origin: bottom center;
@@ -463,9 +481,22 @@ body {
     inset 0 -1px 2px 0px rgba(255, 255, 255, 0.3),
     inset 0 1.5px 4px 0px rgb(0 0 0 / 30%);
 }
+
+#commentInput::placeholder {
+  color: rgba(255, 255, 255, 0.8);
+}
 .comment-text {
   padding: 2px 4px;
   font-size: 14px;
+}
+.date-shield {
+  position: absolute;
+  opacity: 0.4;
+  top: -3px;
+  text-align: right;
+  right: 11px;
+  font-size: 9px;
+  pointer-events: none;
 }
 .reply {
   border: 1px solid rgb(255 255 255 / 30%);
@@ -713,9 +744,13 @@ body {
   transition: opacity 0.3s ease;
   */
   position: absolute;
-  inset: 6px;
-  border: black dashed 3px;
-  box-shadow: rgba(0, 0, 0, 0.6) 0px 0px 0px 30px;
+  /*inset: 6px;*/
+  inset: 0px;
+  /*border: black dashed 3px;*/
+  /*box-shadow: rgba(0, 0, 0, 0.6) 0px 0px 0px 30px;*/
+  box-shadow:
+    inset rgba(0, 41, 112, 0.6) 0 0 8px 5px,
+    rgba(0, 41, 112, 0.6) 0px 0px 0px 30px;
   border-radius: 36px;
   display: flex;
   opacity: 0;
@@ -723,11 +758,11 @@ body {
   z-index: 10000;
 }
 #addCommentBtn.active {
-  background-color: rgba(37, 147, 110, 0.5);
+  background-color: var(--primary-color);
   color: white;
 }
 #drawFreehandBtn.active {
-  background-color: rgba(37, 147, 110, 0.5);
+  background-color: var(--primary-color);
   color: white;
 }
 
@@ -899,7 +934,7 @@ body {
 }
 
 .toggle input:checked + .slider {
-  background-color: rgba(37, 147, 110, 0.5);
+  background-color: var(--primary-color);
 }
 #panel * {
   -webkit-tap-highlight-color: transparent;
@@ -1072,7 +1107,9 @@ body {
     2px 2px 20px 0px #00000038,
     1px 1px 6px 0px rgb(0 0 0 / 20%);
   overflow: hidden;
-  transition: opacity 1s;
+  transition:
+    opacity 1s,
+    width 0.2s ease-in-out;
 }
 #yPano::before {
   content: "";
@@ -1099,6 +1136,37 @@ body {
     linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
+}
+#yPano.is-expanded {
+  width: calc(100% - 20px);
+}
+
+#panoExpandBtn {
+  position: absolute;
+  height: 38px;
+  width: 38px;
+  border-radius: 38px;
+  background-color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+  line-height: 38px;
+  top: 62px;
+  right: 20px;
+  z-index: 100;
+  pointer-events: auto;
+  border: none;
+  box-shadow: 0 2px 3px 1px rgba(0, 0, 0, 0.2);
+}
+.player {
+  height: 100%;
+}
+
+.panoMarker {
+  background-image: url("./utils/icon-pano.svg");
+  background-size: contain;
+  width: 64px;
+  height: 64px;
+  z-index: 100;
 }
 
 .player {

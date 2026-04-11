@@ -4,6 +4,11 @@ import { setupTwoFingerRuler } from "./maplibre-ruler.js";
 import { setupMirrorViewer } from "./mirror-viewer.js";
 import { installYandex3395Protocol } from "./yandex3395-protocol.js";
 import { setupPanoramaViewer } from "./panorama-viewer-prod.js";
+import { createDxfExportWidget } from "./dxf-deck/dxf-export-widget.js";
+import { createPmtilesProjectsManager } from "./dxf-deck/pmtiles-projects.js";
+import { initComments } from "./comments.js";
+
+const { MapboxOverlay } = deck;
 
 const TASHKENT_BORDERS_URL =
   //"https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent_vector/260403_borders.geojson";
@@ -22,6 +27,11 @@ const TASHKENT_MIRRORS_URL =
 
 const TASHKENT_PANORAMAS_URL =
   "https://storage.yandexcloud.net/ts-tiles/tashkent-pano/merged.pmtiles";
+
+const TASHKENT_PROJECT_INDEX_URL =
+  "https://storage.yandexcloud.net/ts-tiles/tashkent-vector/260403_project_index.json";
+
+const API_BASE = "https://d5dvd58pocihuelne2bh.iwzqm34r.apigw.yandexcloud.net";
 
 // --- main -------------------------------------------------------------------
 
@@ -71,6 +81,20 @@ let mirrorsModeEnabled = false;
 let panoramaViewer = null;
 let panoramasModeEnabled = false;
 
+const deckOverlay = new MapboxOverlay({
+  interleaved: false,
+  layers: [],
+});
+
+const projectsManager = createPmtilesProjectsManager({
+  deck,
+  deckOverlay,
+  enablePanelUi: false,
+  onLog: console.log,
+});
+
+let projectIndex = null;
+const streetProjectState = new Map();
 // === PMTiles URLs ===
 /*
 const PMTILES_URLS = [
@@ -247,6 +271,42 @@ class BaseLayersControl {
     this._panoramasButton.style.height = "30px";
     this._panoramasButton.style.fontSize = "16px";
 
+    this._commentsToggleButton = document.createElement("button");
+    this._commentsToggleButton.type = "button";
+    this._commentsToggleButton.id = "toggleComments";
+    this._commentsToggleButton.title = "Комментарии";
+    this._commentsToggleButton.setAttribute("aria-label", "Комментарии");
+    this._commentsToggleButton.innerHTML =
+      '<i class="fa fa-commenting-o" aria-hidden="true"></i>';
+    this._commentsToggleButton.style.width = "30px";
+    this._commentsToggleButton.style.height = "30px";
+    this._commentsToggleButton.style.fontSize = "16px";
+
+    this._commentsAddButton = document.createElement("button");
+    this._commentsAddButton.type = "button";
+    this._commentsAddButton.id = "addCommentBtn";
+    this._commentsAddButton.title = "Добавить комментарий";
+    this._commentsAddButton.setAttribute("aria-label", "Добавить комментарий");
+    this._commentsAddButton.innerHTML =
+      '<i class="fa fa-plus-square-o" aria-hidden="true"></i>';
+    this._commentsAddButton.style.width = "30px";
+    this._commentsAddButton.style.height = "30px";
+    this._commentsAddButton.style.fontSize = "16px";
+
+    this._commentsDrawButton = document.createElement("button");
+    this._commentsDrawButton.type = "button";
+    this._commentsDrawButton.id = "drawFreehandBtn";
+    this._commentsDrawButton.title = "Рисование";
+    this._commentsDrawButton.setAttribute("aria-label", "Рисование");
+    this._commentsDrawButton.innerHTML =
+      '<i class="fa fa-pencil" aria-hidden="true"></i>';
+    this._commentsDrawButton.style.width = "30px";
+    this._commentsDrawButton.style.height = "30px";
+    this._commentsDrawButton.style.fontSize = "16px";
+
+    this._commentsAddButton.style.display = "none";
+    this._commentsDrawButton.style.display = "none";
+
     const isLayerVisible = (layerId) => {
       if (!this._map.getLayer(layerId)) return false;
       return this._map.getLayoutProperty(layerId, "visibility") === "visible";
@@ -294,6 +354,23 @@ class BaseLayersControl {
       this._panoramasButton.style.backgroundColor = panoramasModeEnabled
         ? "#22966fa5"
         : "";
+
+      this._commentsToggleButton.style.backgroundColor = document
+        .getElementById("toggleComments")
+        ?.classList.contains("active")
+        ? "#22966fa5"
+        : "";
+
+      const commentsEnabled = document
+        .getElementById("toggleComments")
+        ?.classList.contains("active");
+
+      this._commentsToggleButton.style.backgroundColor = commentsEnabled
+        ? "#22966fa5"
+        : "";
+
+      this._commentsAddButton.style.display = commentsEnabled ? "" : "none";
+      this._commentsDrawButton.style.display = commentsEnabled ? "" : "none";
     };
 
     this._satButton.addEventListener("click", () => {
@@ -383,6 +460,10 @@ class BaseLayersControl {
       this._container.appendChild(this._panoramasButton);
     }
 
+    this._container.appendChild(this._commentsToggleButton);
+    this._container.appendChild(this._commentsAddButton);
+    this._container.appendChild(this._commentsDrawButton);
+
     this._onIdle = () => syncButtons();
     this._map.on("idle", this._onIdle);
 
@@ -436,6 +517,41 @@ maplibregl.addProtocol("pmtiles", protocol.tile);
 let selectedFeatureId = null;
 let activeBorderPopup = null;
 
+let activePopupWidget = null;
+let gdalPromise = null;
+
+const DXF_WIDGET_PASSWORD = "1234";
+const DXF_PROJ4 = `
++proj=tmerc +lat_0=0 +lon_0=69 +k=1 +x_0=12500000 +y_0=0 +ellps=krass +towgs84=15,-130,-84 +units=m +no_defs
+`.trim();
+
+const STORAGE_CONFIG = {
+  bucketName: "ts-tiles",
+  region: "ru-central1",
+  endpoint: "https://storage.yandexcloud.net",
+  publicBaseUrl: "https://storage.yandexcloud.net/ts-tiles",
+  projectsPrefix: "tashkent-vector/projects",
+  indexKey: "tashkent-vector/260403_project_index.json",
+
+  // MVP: временно храним на фронте.
+  // Потом вынесешь в function / presigned URLs.
+  accessKeyId: "YCAJE2gKkBvJ3PrfV8MR1sx4Q",
+  secretAccessKey: "YCOPWqG4jYqd5yVOs9gN7-T07lVtYkfuOpd1KQyU",
+};
+
+function ensureGdal() {
+  if (!gdalPromise) {
+    gdalPromise = initGdalJs({
+      path: "./vendor/gdal3",
+      useWorker: false,
+      env: {
+        DXF_ENCODING: "UTF-8",
+      },
+    });
+  }
+  return gdalPromise;
+}
+
 let bordersGeojson = null;
 
 const streetsPanel = document.getElementById("streets-panel");
@@ -472,6 +588,8 @@ if (streetsPanel && streetsPanelToggle) {
 }
 
 map.on("load", async () => {
+  map.addControl(deckOverlay);
+
   const panoIcon = await map.loadImage("./src/icon-pano.png");
   map.addImage("panoIcon", panoIcon.data);
 
@@ -637,7 +755,7 @@ map.on("load", async () => {
     paint: {
       "fill-color": "#464646",
 
-      "fill-opacity": 0.3,
+      "fill-opacity": ["interpolate", ["linear"], ["zoom"], 16, 0.3, 18, 0],
     },
   });
 
@@ -726,7 +844,85 @@ map.on("load", async () => {
 
   const bordersResp = await fetch(TASHKENT_BORDERS_URL);
   bordersGeojson = await bordersResp.json();
-  buildStreetsPanel(bordersGeojson);
+  projectIndex = await loadProjectIndexSafe();
+  buildStreetsPanel(bordersGeojson, projectIndex);
+
+  initComments(map, deckOverlay, {
+    name: "tashkent",
+    minDrawZoom: 16,
+    dom: {
+      addCommentButton: document.getElementById("addCommentBtn"),
+      drawButton: document.getElementById("drawFreehandBtn"),
+    },
+    storage: {
+      loadAll: async (project) => {
+        const res = await fetch(
+          `${API_BASE}/comments?project=${encodeURIComponent(project)}`,
+        );
+
+        const text = await res.text();
+
+        if (!res.ok) {
+          console.error("[loadAll] status:", res.status);
+          console.error("[loadAll] body:", text);
+          throw new Error(`Load failed: ${res.status} ${text}`);
+        }
+
+        try {
+          return JSON.parse(text);
+        } catch {
+          throw new Error(`Load failed: invalid JSON response: ${text}`);
+        }
+      },
+
+      saveOne: async (project, entity) => {
+        const res = await fetch(
+          `${API_BASE}/comments?project=${encodeURIComponent(project)}&id=${encodeURIComponent(entity.id)}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(entity),
+          },
+        );
+
+        const text = await res.text();
+
+        if (!res.ok) {
+          console.error("[saveOne] status:", res.status);
+          console.error("[saveOne] body:", text);
+          console.error("[saveOne] entity:", entity);
+          throw new Error(`Save failed: ${res.status} ${text}`);
+        }
+
+        try {
+          return text ? JSON.parse(text) : null;
+        } catch {
+          return text;
+        }
+      },
+
+      deleteOne: async (project, id) => {
+        const res = await fetch(
+          `${API_BASE}/comments/${encodeURIComponent(id)}?project=${encodeURIComponent(project)}`,
+          { method: "DELETE" },
+        );
+
+        const text = await res.text();
+
+        if (!res.ok) {
+          console.error("[deleteOne] status:", res.status);
+          console.error("[deleteOne] body:", text);
+          throw new Error(`Delete failed: ${res.status} ${text}`);
+        }
+
+        try {
+          return text ? JSON.parse(text) : null;
+        } catch {
+          return text;
+        }
+      },
+    },
+  });
 });
 
 function normalizeSearchValue(value) {
@@ -790,6 +986,169 @@ function setActiveStreetItem(name) {
   });
 }
 
+function buildBorderPopupContent(feature) {
+  const props = feature?.properties || {};
+  const name = (props.Name || "").trim();
+  const link = (props.link || "").trim();
+
+  const root = document.createElement("div");
+  root.style.minWidth = "240px";
+
+  const title = document.createElement("div");
+  title.style.fontWeight = "600";
+  title.style.marginBottom = "8px";
+  title.textContent = name || "Без названия";
+  root.appendChild(title);
+
+  if (link) {
+    const linkEl = document.createElement("a");
+    linkEl.href = link;
+    linkEl.target = "_blank";
+    linkEl.rel = "noopener noreferrer";
+    linkEl.style.display = "block";
+    linkEl.style.width = "calc(100% - 42px)";
+    linkEl.style.padding = "8px 10px";
+    linkEl.style.border = "1px solid rgb(204, 204, 204)";
+    linkEl.style.borderRadius = "6px";
+    linkEl.style.cursor = "pointer";
+
+    linkEl.textContent = "Ссылка на проект";
+    root.appendChild(linkEl);
+  } else {
+    const emptyLink = document.createElement("div");
+    emptyLink.style.color = "#999";
+    emptyLink.style.display = "block";
+    emptyLink.style.width = "calc(100% - 42px)";
+    emptyLink.style.padding = "8px 10px";
+    emptyLink.style.border = "1px solid rgb(204, 204, 204)";
+    emptyLink.style.borderRadius = "6px";
+    emptyLink.textContent = "Ссылка на проект";
+    root.appendChild(emptyLink);
+  }
+
+  const adminWrap = document.createElement("div");
+  adminWrap.style.marginTop = "12px";
+  adminWrap.style.width = "calc(100% - 20px)";
+  adminWrap.style.paddingTop = "10px";
+  adminWrap.style.borderTop = "1px solid #e5e5e5";
+  root.appendChild(adminWrap);
+
+  const openAuthBtn = document.createElement("button");
+  openAuthBtn.type = "button";
+  openAuthBtn.textContent = "Загрузить проект на карту";
+  openAuthBtn.style.display = "block";
+  openAuthBtn.style.width = "100%";
+  openAuthBtn.style.padding = "8px 10px";
+  openAuthBtn.style.border = "1px solid #ccc";
+  openAuthBtn.style.borderRadius = "6px";
+  openAuthBtn.style.background = "#fff";
+  openAuthBtn.style.cursor = "pointer";
+  adminWrap.appendChild(openAuthBtn);
+
+  const authWrap = document.createElement("div");
+  authWrap.style.display = "none";
+  authWrap.style.marginTop = "10px";
+  adminWrap.appendChild(authWrap);
+
+  const passInput = document.createElement("input");
+  passInput.type = "password";
+  passInput.placeholder = "Пароль";
+  passInput.style.boxSizing = "border-box";
+  passInput.style.width = "100%";
+  passInput.style.padding = "8px";
+  passInput.style.marginBottom = "8px";
+  passInput.style.border = "1px solid #ccc";
+  passInput.style.borderRadius = "6px";
+
+  const authBtn = document.createElement("button");
+  authBtn.type = "button";
+  authBtn.textContent = "Открыть";
+  authBtn.style.display = "block";
+  authBtn.style.width = "100%";
+  authBtn.style.padding = "8px 10px";
+  authBtn.style.border = "1px solid #ccc";
+  authBtn.style.borderRadius = "6px";
+  authBtn.style.background = "#fff";
+  authBtn.style.cursor = "pointer";
+
+  const authError = document.createElement("div");
+  authError.style.display = "none";
+  authError.style.marginTop = "6px";
+  authError.style.fontSize = "12px";
+  authError.style.color = "#c62828";
+  authError.textContent = "Неверный пароль";
+
+  authWrap.appendChild(passInput);
+  authWrap.appendChild(authBtn);
+  authWrap.appendChild(authError);
+
+  const widgetHost = document.createElement("div");
+  widgetHost.style.display = "none";
+  widgetHost.style.width = "calc(100% - 20px)";
+  widgetHost.style.marginTop = "12px";
+  root.appendChild(widgetHost);
+
+  openAuthBtn.addEventListener("click", () => {
+    authWrap.style.display =
+      authWrap.style.display === "none" ? "block" : "none";
+    if (authWrap.style.display === "block") {
+      setTimeout(() => passInput.focus(), 0);
+    }
+  });
+
+  async function openWidget() {
+    const pass = passInput.value.trim();
+
+    if (pass !== DXF_WIDGET_PASSWORD) {
+      authError.style.display = "block";
+      return;
+    }
+
+    authError.style.display = "none";
+    authWrap.style.display = "none";
+    openAuthBtn.style.display = "none";
+    widgetHost.style.display = "block";
+
+    if (activePopupWidget) {
+      activePopupWidget.destroy();
+      activePopupWidget = null;
+    }
+
+    widgetHost.innerHTML = `<div style="font-size:12px;color:#666;">Инициализация GDAL...</div>`;
+
+    try {
+      const Gdal = await ensureGdal();
+      widgetHost.innerHTML = "";
+
+      activePopupWidget = createDxfExportWidget({
+        container: widgetHost,
+        Gdal,
+        proj4: DXF_PROJ4,
+        featureName: name,
+        storage: STORAGE_CONFIG,
+      });
+    } catch (err) {
+      console.error(err);
+      widgetHost.innerHTML = `
+        <div style="color:#c62828; font-size:12px;">
+          Ошибка инициализации GDAL: ${escapeHtml(err?.message || String(err))}
+        </div>
+      `;
+    }
+  }
+
+  authBtn.addEventListener("click", openWidget);
+
+  passInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      openWidget();
+    }
+  });
+
+  return root;
+}
+
 function selectBorderFeature(feature, opts = {}) {
   if (!feature) return;
 
@@ -801,30 +1160,14 @@ function selectBorderFeature(feature, opts = {}) {
     activeBorderPopup = null;
   }
 
+  if (activePopupWidget) {
+    activePopupWidget.destroy();
+    activePopupWidget = null;
+  }
+
   selectedFeatureId = props.Name || null;
   updateBordersStyle();
   setActiveStreetItem(selectedFeatureId);
-
-  const name = (props.Name || "").trim();
-  const link = (props.link || "").trim();
-
-  const html = `
-    <div style="min-width:220px;">
-      <div style="font-weight:600; margin-bottom:8px;">
-        ${escapeHtml(name || "Без названия")}
-      </div>
-      ${
-        link
-          ? `<a
-               href="${escapeAttr(link)}"
-               target="_blank"
-               rel="noopener noreferrer"
-               style="color:#1a73e8; text-decoration:underline;"
-             >ссылка на проект</a>`
-          : `<div style="color:#999;">ссылка на проект</div>`
-      }
-    </div>
-  `;
 
   if (flyToFeature) {
     map.fitBounds(getFeatureBounds(feature), {
@@ -841,15 +1184,21 @@ function selectBorderFeature(feature, opts = {}) {
 
   const center = getFeatureCenter(feature);
 
+  const popupContent = buildBorderPopupContent(feature);
+
   activeBorderPopup = new maplibregl.Popup({
     closeButton: true,
     closeOnClick: true,
   })
     .setLngLat(center)
-    .setHTML(html)
+    .setDOMContent(popupContent)
     .addTo(map);
 
   activeBorderPopup.on("close", () => {
+    if (activePopupWidget) {
+      activePopupWidget.destroy();
+      activePopupWidget = null;
+    }
     activeBorderPopup = null;
     clearBorderSelection();
   });
@@ -906,7 +1255,105 @@ function etapLabel(etap) {
   return etap || "Без этапа";
 }
 
-function buildStreetsPanel(featureCollection) {
+function normalizeProjectId(name) {
+  return (
+    String(name || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}._-]+/gu, "_")
+      .replace(/^_+|_+$/g, "") || "unnamed"
+  );
+}
+
+async function loadProjectIndexSafe() {
+  try {
+    const resp = await fetch(TASHKENT_PROJECT_INDEX_URL, { cache: "no-store" });
+    if (resp.status === 404) {
+      return { schemaVersion: 1, updatedAt: null, items: {} };
+    }
+    if (!resp.ok) {
+      throw new Error(`project_index HTTP ${resp.status}`);
+    }
+    const json = await resp.json();
+    return {
+      schemaVersion: 1,
+      updatedAt: json?.updatedAt || null,
+      items: json?.items && typeof json.items === "object" ? json.items : {},
+    };
+  } catch (err) {
+    console.error("[project-index]", err);
+    return { schemaVersion: 1, updatedAt: null, items: {} };
+  }
+}
+
+function getStreetProjectMeta(streetName) {
+  return projectIndex?.items?.[streetName] || null;
+}
+
+function ensureStreetProjectState(streetName) {
+  if (!streetProjectState.has(streetName)) {
+    streetProjectState.set(streetName, {
+      loaded: false,
+      visible: false,
+      projectId: normalizeProjectId(streetName),
+    });
+  }
+  return streetProjectState.get(streetName);
+}
+
+async function ensureStreetProjectLoaded(streetName) {
+  const meta = getStreetProjectMeta(streetName);
+  if (!meta?.sidecarUrl) return null;
+
+  const state = ensureStreetProjectState(streetName);
+  if (state.loaded) return state;
+
+  const projectId = state.projectId;
+
+  projectsManager.addProject(
+    projectId,
+    streetName,
+    [
+      {
+        name: "Транспортная схема",
+        url: meta.sidecarUrl,
+        minZoom: 14,
+        maxZoom: 17,
+      },
+    ],
+    {
+      createButton: false,
+      initiallyVisible: true,
+    },
+  );
+
+  state.loaded = true;
+  state.visible = true;
+  return state;
+}
+
+async function toggleStreetProject(streetName) {
+  const meta = getStreetProjectMeta(streetName);
+  if (!meta) return false;
+
+  const state = ensureStreetProjectState(streetName);
+
+  if (!state.loaded) {
+    await ensureStreetProjectLoaded(streetName);
+    return true;
+  }
+
+  state.visible = !state.visible;
+  projectsManager.toggleProjectVisibility(state.projectId, state.visible);
+  return state.visible;
+}
+
+function getStreetProjectVisible(streetName) {
+  const state = streetProjectState.get(streetName);
+  return !!state?.visible;
+}
+
+function buildStreetsPanel(featureCollection, projectIndexArg = null) {
   if (!streetsPanelBody || !featureCollection?.features) return;
 
   const groups = new Map();
@@ -958,13 +1405,50 @@ function buildStreetsPanel(featureCollection) {
 
       // <span class="street-item__number">${escapeHtml(String(number))}</span>
 
+      const hasProject = !!projectIndexArg?.items?.[name];
+      const isVisible = getStreetProjectVisible(name);
+
       itemEl.innerHTML = `
-        <span>${escapeHtml(name)}</span>
+        <span class="street-item__label">${escapeHtml(name)}</span>
+        ${
+          hasProject
+            ? `<button
+                 type="button"
+                 class="street-project-toggle"
+                 data-project-name="${escapeAttr(name)}"
+                 title="${isVisible ? "Скрыть проект" : "Показать проект"}"
+               >
+                 <i class="fa ${isVisible ? "fa-eye" : "fa-eye-slash"}" aria-hidden="true"></i>
+               </button>`
+            : ``
+        }
       `;
 
       itemEl.addEventListener("click", () => {
         selectBorderFeature(feature, { flyToFeature: true });
       });
+
+      const toggleBtn = itemEl.querySelector(".street-project-toggle");
+      if (toggleBtn) {
+        toggleBtn.addEventListener("click", async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          toggleBtn.disabled = true;
+          try {
+            const visible = await toggleStreetProject(name);
+            const icon = toggleBtn.querySelector("i");
+            if (icon) {
+              icon.className = `fa ${visible ? "fa-eye" : "fa-eye-slash"}`;
+            }
+            toggleBtn.title = visible ? "Скрыть проект" : "Показать проект";
+          } catch (err) {
+            console.error("[street-project-toggle]", err);
+          } finally {
+            toggleBtn.disabled = false;
+          }
+        });
+      }
 
       listEl.appendChild(itemEl);
     }
@@ -979,7 +1463,9 @@ function buildStreetsPanel(featureCollection) {
 }
 
 map.on("click", "tashkent-borders", (e) => {
-  if (ruler.isEnabled?.() || mirrorsModeEnabled || panoramasModeEnabled) return;
+  if (ruler.isEnabled?.() || mirrorsModeEnabled || panoramasModeEnabled)
+    if (window.__commentsBlockingMapInteractions) return;
+  return;
 
   const feature = e.features?.[0];
   if (!feature) return;
@@ -988,7 +1474,9 @@ map.on("click", "tashkent-borders", (e) => {
 });
 
 map.on("click", "tashkent-other-borders", (e) => {
-  if (ruler.isEnabled?.() || mirrorsModeEnabled || panoramasModeEnabled) return;
+  if (ruler.isEnabled?.() || mirrorsModeEnabled || panoramasModeEnabled)
+    if (window.__commentsBlockingMapInteractions) return;
+  return;
 
   const topFeature = map.queryRenderedFeatures(e.point, {
     layers: ["tashkent-borders", "tashkent-other-borders"],
@@ -1004,6 +1492,7 @@ map.on("click", "tashkent-other-borders", (e) => {
 
 map.on("click", (e) => {
   if (ruler.isEnabled?.() || mirrorsModeEnabled || panoramasModeEnabled) return;
+  if (window.__commentsBlockingMapInteractions) return;
 
   const features = map.queryRenderedFeatures(e.point, {
     layers: ["tashkent-borders", "tashkent-other-borders"],

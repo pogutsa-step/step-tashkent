@@ -550,7 +550,7 @@ const STORAGE_CONFIG = {
 function ensureGdal() {
   if (!gdalPromise) {
     gdalPromise = initGdalJs({
-      path: "./vendor/gdal3",
+      path: "./step-tashkent/vendor/gdal3",
       useWorker: false,
       env: {
         DXF_ENCODING: "UTF-8",
@@ -1230,27 +1230,28 @@ function selectBorderFeature(feature, opts = {}) {
       maxZoom: 16.5,
     });
   }
+  if (!window.__commentsBlockingMapInteractions) {
+    const center = getFeatureCenter(feature);
 
-  const center = getFeatureCenter(feature);
+    const popupContent = buildBorderPopupContent(feature);
 
-  const popupContent = buildBorderPopupContent(feature);
+    activeBorderPopup = new maplibregl.Popup({
+      closeButton: true,
+      closeOnClick: true,
+    })
+      .setLngLat(center)
+      .setDOMContent(popupContent)
+      .addTo(map);
 
-  activeBorderPopup = new maplibregl.Popup({
-    closeButton: true,
-    closeOnClick: true,
-  })
-    .setLngLat(center)
-    .setDOMContent(popupContent)
-    .addTo(map);
-
-  activeBorderPopup.on("close", () => {
-    if (activePopupWidget) {
-      activePopupWidget.destroy();
-      activePopupWidget = null;
-    }
-    activeBorderPopup = null;
-    clearBorderSelection();
-  });
+    activeBorderPopup.on("close", () => {
+      if (activePopupWidget) {
+        activePopupWidget.destroy();
+        activePopupWidget = null;
+      }
+      activeBorderPopup = null;
+      clearBorderSelection();
+    });
+  }
 }
 
 function selectOtherBorderFeature(feature) {
@@ -1573,8 +1574,6 @@ function buildStreetsPanel(featureCollection, projectIndexArg = null) {
 map.on("click", "tashkent-borders", (e) => {
   if (ruler.isEnabled?.() || mirrorsModeEnabled || panoramasModeEnabled) return;
   if (window.__commentsBlockingMapInteractions) return;
-
-  console.log(window.__commentsBlockingMapInteractions);
 
   const feature = e.features?.[0];
   if (!feature) return;

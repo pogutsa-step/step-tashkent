@@ -1181,11 +1181,16 @@ body {
 }
 
 .street-item-wrap {
+  border-top: 1px solid #f1f1f1;
   display: block;
 }
 
+.street-item-wrap:first-child {
+  border-top: 0;
+}
+
 .street-comments-toggle {
-  border: 1px solid transparent;
+  border: 2px solid transparent;
   background: transparent;
   cursor: pointer;
   padding: 0;
@@ -1201,13 +1206,24 @@ body {
   align-items: center;
   justify-content: center;
   flex-direction: row;
+  margin-bottom: 4px;
 }
 .street-comments-toggle.active {
-  background: white;
+  background: #ddd;
   border-radius: 8px 8px 0px 0px;
+  margin-bottom: 0;
+  padding-bottom: 4px;
+  height: 30px;
 }
 .street-comments-toggle:hover {
   background: #b7babc;
+}
+
+.street-comments-toggle.active:hover {
+  background: #ddd;
+  border-top: 2px solid #1f4fa3;
+  border-left: 2px solid #1f4fa3;
+  border-right: 2px solid #1f4fa3;
 }
 
 .street-comments-count {
@@ -1229,6 +1245,7 @@ body {
   flex-direction: column;
   gap: 4px;
   padding: 6px;
+  background-color: #ddd;
 }
 
 .street-comment-item {
@@ -1256,5 +1273,5 @@ body {
 }
 
 .street-comment-item.is-resolved {
-  color: white;
+  color: grey;
 }

@@ -270,7 +270,7 @@ export function initComments(map, deck, options = {}) {
     if (map.getZoom() < minDrawZoom) {
       map.jumpTo({
         center: centerCoords,
-        zoom: minDrawZoom,
+        zoom: minDrawZoom + 1,
       });
     } else {
       map.easeTo({

@@ -212,6 +212,11 @@ const PMTILES_URLS = [
   "https://storage.yandexcloud.net/ts-tiles/tashkent-ortho/Ферганское_5.pmtiles",
   "https://storage.yandexcloud.net/ts-tiles/tashkent-ortho/Ферганское_6.pmtiles",
   "https://storage.yandexcloud.net/ts-tiles/tashkent-ortho/Ферганское_7.pmtiles",
+  "https://storage.yandexcloud.net/ts-tiles/tashkent-ortho/Chinobod-orthophoto.pmtiles",
+  "https://storage.yandexcloud.net/ts-tiles/tashkent-ortho/qurilish_ODM.pmtiles",
+  "https://storage.yandexcloud.net/ts-tiles/tashkent-ortho/Rixsiliy-orthophoto.pmtiles",
+  "https://storage.yandexcloud.net/ts-tiles/tashkent-ortho/Shahriston-orthophoto.pmtiles",
+  "https://storage.yandexcloud.net/ts-tiles/tashkent-ortho/Yangi Yunusobod.pmtiles"
 ];
 const PMTILES_LAYER_IDS = PMTILES_URLS.map((_, i) => `pmtiles-${i}`);
 

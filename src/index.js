@@ -154,6 +154,8 @@ const PMTILES_URLS = [
   "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Ферганское_5.pmtiles",
   "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Ферганское_6.pmtiles",
   "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Ферганское_7.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/gulsaroy_mod.pmtiles",
+  "https://lucky-haze-a46b.yanpogutsa.workers.dev/tashkent-ortho/Qorasaroy-orthophoto_modified.pmtiles",
 ];
 */
 const PMTILES_URLS = [

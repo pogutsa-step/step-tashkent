@@ -302,7 +302,7 @@ class BaseLayersControl {
     this._commentsToggleButton.style.height = "30px";
     this._commentsToggleButton.style.fontSize = "16px";
     this._commentsToggleButton.style.color = "black";
-    /*
+
     this._commentsAddButton = document.createElement("button");
     this._commentsAddButton.type = "button";
     this._commentsAddButton.id = "addCommentBtn";
@@ -329,7 +329,6 @@ class BaseLayersControl {
 
     this._commentsAddButton.style.display = "none";
     this._commentsDrawButton.style.display = "none";
-    */
 
     const isLayerVisible = (layerId) => {
       if (!this._map.getLayer(layerId)) return false;
@@ -485,8 +484,8 @@ class BaseLayersControl {
     }
 
     this._container.appendChild(this._commentsToggleButton);
-    //this._container.appendChild(this._commentsAddButton);
-    //this._container.appendChild(this._commentsDrawButton);
+    this._container.appendChild(this._commentsAddButton);
+    this._container.appendChild(this._commentsDrawButton);
 
     this._onIdle = () => syncButtons();
     this._map.on("idle", this._onIdle);

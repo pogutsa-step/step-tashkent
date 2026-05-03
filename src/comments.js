@@ -369,12 +369,14 @@ export function initComments(map, deck, options = {}) {
     toggleBtn?.classList.toggle("active", enabled);
 
     if (addBtn) {
-      addBtn.style.display = enabled ? "" : "none";
+      //addBtn.style.display = enabled ? "" : "none";
+      addBtn.style.display = "none";
       addBtn.classList.toggle("active", enabled && addingCommentMode);
     }
 
     if (drawBtn) {
-      drawBtn.style.display = enabled ? "" : "none";
+      //drawBtn.style.display = enabled ? "" : "none";
+      drawBtn.style.display = "none";
       drawBtn.classList.toggle("active", enabled && drawingMode);
     }
   }
@@ -881,6 +883,7 @@ export function initComments(map, deck, options = {}) {
   // ✅ Touch-события для перетаскивания popup на мобильных
 
   function startTouchDragging(e) {
+    return;
     const target = e.target;
     if (target.classList.contains("move-popup")) {
       const id = target.dataset.id;
@@ -1239,34 +1242,34 @@ export function initComments(map, deck, options = {}) {
   </div>
 
   <div class="reply-buttons" style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px;">
-    <button class="add-reply" data-id="${feature.properties.id}" style="display:none;" title="Добавить ответ">
+    <!--<button class="add-reply" data-id="${feature.properties.id}" style="display:none;" title="Добавить ответ">
       <i class="fa fa-floppy-o" aria-hidden="true"></i>
-    </button>
+    </button>-->
 
     <button class="resolve-comment ${resolveClass}" data-id="${feature.properties.id}" title="Отметить как решённый">
       <i class="fa fa-check" aria-hidden="true"></i>
     </button>
 
-    <button class="show-reply-input" data-id="${feature.properties.id}" title="Ответить">
+    <!--<button class="show-reply-input" data-id="${feature.properties.id}" title="Ответить">
       <i class="fa fa-reply" aria-hidden="true"></i>
-    </button>
+    </button>-->
 
-    <button class="edit-comment" data-id="${feature.properties.id}" title="Редактировать">
+    <!--<button class="edit-comment" data-id="${feature.properties.id}" title="Редактировать">
       <i class="fa fa-pencil" aria-hidden="true"></i>
-    </button>
+    </button>-->
 
-    <button class="save-comment" style="display:none;" data-id="${feature.properties.id}" title="Сохранить">
+    <!--<button class="save-comment" style="display:none;" data-id="${feature.properties.id}" title="Сохранить">
       <i class="fa fa-floppy-o" aria-hidden="true"></i>
-    </button>
+    </button>-->
 
-    <div style="margin-left: auto; display: flex; gap: 4px;">
+    <!--<div style="margin-left: auto; display: flex; gap: 4px;">
       <button class="move-popup" data-id="${feature.properties.id}" title="Переместить">
         <i class="fa fa-arrows" aria-hidden="true"></i>
       </button>
       <button class="delete-comment" data-id="${feature.properties.id}" style="color:black" title="Удалить">
         <i class="fa fa-trash" aria-hidden="true"></i>
       </button>
-    </div>
+    </div>-->
   </div>
 </div>
 
@@ -1862,6 +1865,7 @@ export function initComments(map, deck, options = {}) {
   }
 
   addBtn.addEventListener("click", () => {
+    return;
     // 🛑 Выход из режима рисования, если активен
     if (drawingMode) {
       toggleDrawing();

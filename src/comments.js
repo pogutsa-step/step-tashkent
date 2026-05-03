@@ -1088,6 +1088,119 @@ export function initComments(map, deck, options = {}) {
 
     _refreshCommentsDeck();
   }
+  function renderCommentImages(images = []) {
+    if (!Array.isArray(images) || !images.length) return "";
+
+    return `
+    <div class="comment-images-host" style="display:none;">
+      <div class="comment-images comment-images-view">
+        ${images
+          .map(
+            (img) => `
+              <div class="comment-thumb-wrap" data-image-id="${img.id || ""}">
+                <img
+                  class="comment-thumb"
+                  src="${img.thumbUrl || img.url || img.dataUrl || ""}"
+                  data-full-src="${img.url || img.dataUrl || img.thumbUrl || ""}"
+                  alt="Фото комментария"
+                />
+              </div>
+            `,
+          )
+          .join("")}
+      </div>
+    </div>
+  `;
+  }
+
+  let activeImageModalState = {
+    images: [],
+    index: 0,
+    text: "",
+  };
+
+  function openCommentImageModal(images, startIndex = 0, text = "") {
+    activeImageModalState = {
+      images: Array.isArray(images) ? images : [],
+      index: startIndex,
+      text,
+    };
+
+    let modal = document.getElementById("commentImageModal");
+
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = "commentImageModal";
+      modal.innerHTML = `
+      <button class="comment-image-modal-close" title="Закрыть">
+        <i class="fa fa-times" aria-hidden="true"></i>
+      </button>
+
+      <button class="comment-image-nav comment-image-prev" title="Предыдущее">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+      </button>
+
+      <img class="comment-image-modal-img" alt="Фото" />
+
+      <button class="comment-image-nav comment-image-next" title="Следующее">
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </button>
+
+      <div class="comment-image-toast"></div>
+    `;
+
+      document.body.appendChild(modal);
+
+      modal.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (
+          e.target.id === "commentImageModal" ||
+          e.target.closest(".comment-image-modal-close")
+        ) {
+          modal.classList.remove("open");
+        }
+
+        if (e.target.closest(".comment-image-prev")) {
+          showModalImage(activeImageModalState.index - 1);
+        }
+
+        if (e.target.closest(".comment-image-next")) {
+          showModalImage(activeImageModalState.index + 1);
+        }
+      });
+    }
+
+    showModalImage(startIndex);
+    modal.classList.add("open");
+  }
+
+  function showModalImage(nextIndex) {
+    const modal = document.getElementById("commentImageModal");
+    if (!modal) return;
+
+    const images = activeImageModalState.images;
+    if (!images.length) return;
+
+    const max = images.length - 1;
+    const index = Math.max(0, Math.min(max, nextIndex));
+    activeImageModalState.index = index;
+
+    const img = images[index];
+
+    modal.querySelector(".comment-image-modal-img").src =
+      img.url || img.dataUrl || img.thumbUrl || "";
+
+    modal.querySelector(".comment-image-toast").textContent =
+      activeImageModalState.text || "";
+
+    modal.querySelector(".comment-image-prev").style.display =
+      images.length > 1 && index > 0 ? "flex" : "none";
+
+    modal.querySelector(".comment-image-next").style.display =
+      images.length > 1 && index < max ? "flex" : "none";
+  }
 
   // ✅ Обновлённая функция createPopupHtml с data-id вместо data-index
   function createPopupHtml(feature) {
@@ -1116,6 +1229,7 @@ export function initComments(map, deck, options = {}) {
     return `
     <div class="popup-main" data-id="${id}">
       <div class="comment-text">${feature.properties.text}</div>
+      ${renderCommentImages(feature.properties.images)}
       <div class="date-shield" style="display:none;">${featureDate}</div>
       <textarea class="comment-edit" rows="5" style="display:none;">${feature.properties.text}</textarea>
       <div class="reply-block">${repliesHtml}</div>
@@ -1254,6 +1368,36 @@ export function initComments(map, deck, options = {}) {
 
   document.addEventListener("click", (e) => {
     const target = e.target;
+    if (target.closest("#commentImageModal")) {
+      return;
+    }
+
+    const thumb = target.closest(".comment-thumb");
+    if (thumb) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const popup = thumb.closest(".popup-main");
+      const id = popup?.dataset?.id;
+      const feature = commentFeatures.find((f) => f.properties.id === id);
+      const images = feature?.properties?.images || [];
+      const imageId = thumb.closest(".comment-thumb-wrap")?.dataset?.imageId;
+
+      const startIndex = Math.max(
+        0,
+        images.findIndex(
+          (img) => String(img.id || "") === String(imageId || ""),
+        ),
+      );
+
+      openCommentImageModal(
+        images,
+        startIndex,
+        feature?.properties?.text || "",
+      );
+      return;
+    }
+
     if (activePopupElement && !activePopupElement.contains(e.target)) {
       const el = activePopupElement;
 
@@ -1296,6 +1440,10 @@ export function initComments(map, deck, options = {}) {
       );
       el.querySelectorAll(".reply-block").forEach((el) =>
         el.classList.remove("hidden"),
+      );
+      el.querySelector(".comment-images-host")?.style.setProperty(
+        "display",
+        "none",
       );
 
       // 👁 Явно скрываем все save-кнопки и показываем edit-кнопки внутри popup
@@ -1352,6 +1500,9 @@ export function initComments(map, deck, options = {}) {
       if (replyInput) replyInput.style.display = "flex";
 
       popup.querySelector(".date-shield").style.display = "block";
+      popup
+        .querySelector(".comment-images-host")
+        ?.style.setProperty("display", "block");
 
       popup.querySelectorAll(".reply-actions").forEach((el) => {
         el.classList.remove("hidden-inactive");
@@ -1638,6 +1789,10 @@ export function initComments(map, deck, options = {}) {
       document
         .querySelectorAll(".reply-block")
         .forEach((el) => el.classList.remove("hidden"));
+
+      document.querySelectorAll(".comment-images-host").forEach((el) => {
+        el.style.display = "none";
+      });
     }
   });
 

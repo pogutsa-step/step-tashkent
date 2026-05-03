@@ -226,7 +226,7 @@ const PMTILES_URLS = [
   "https://storage.yandexcloud.net/ts-tiles/tashkent-ortho/Lutfiy_mod.pmtiles",
   "https://storage.yandexcloud.net/ts-tiles/tashkent-ortho/Abdulla-Qodiriy-orthophoto_modified.pmtiles",
   "https://storage.yandexcloud.net/ts-tiles/tashkent-ortho/Samarqand-D-orthophoto_modified.pmtiles",
-  "https://storage.yandexcloud.net/ts-tiles/tashkent-ortho/Zarq-orthophoto_modified.pmtiles"
+  "https://storage.yandexcloud.net/ts-tiles/tashkent-ortho/Zarq-orthophoto_modified.pmtiles",
 ];
 const PMTILES_LAYER_IDS = PMTILES_URLS.map((_, i) => `pmtiles-${i}`);
 
@@ -637,7 +637,12 @@ function renderStreetCommentsList(container, streetName) {
           data-comment-id="${escapeAttr(item.id)}"
           title="${escapeAttr(item.text || "")}"
         >
-          ${escapeCommentText(item.text || "Без текста")}
+          <span>${escapeCommentText(item.text || "Без текста")}</span>
+          <span class="street-comment-meta">
+            ${escapeHtml(item.date || "")}
+            <i class="fa fa-user-o" aria-hidden="true"></i>
+            ${escapeHtml(item.author || "Без автора")}
+          </span>
         </button>
       `,
     )

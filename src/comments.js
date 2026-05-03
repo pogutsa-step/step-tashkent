@@ -242,6 +242,8 @@ export function initComments(map, deck, options = {}) {
           coordinates: f?.geometry?.coordinates || null,
           popupOffset: f?.properties?.popupOffset || null,
           createdAt: f?.properties?.createdAt || null,
+          date: f?.properties?.date || "",
+          author: f?.properties?.author || "",
         })),
       };
     }
